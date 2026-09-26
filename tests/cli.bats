@@ -155,3 +155,23 @@ esac'
   [ "$status" -eq 1 ]
   [[ "$output" == *--force* ]]
 }
+
+@test "add --qr without qrencode fails before registering on the hub" {
+  configured
+  rm -f "$STUB_BIN/qrencode"
+  if command -v qrencode >/dev/null; then skip "qrencode installed on this system"; fi
+  run "$REPO_ROOT/wg-hub" add phone --qr
+  [ "$status" -eq 1 ]
+  [[ "$output" == *qrencode* ]]
+  ! grep -q "wg-hub-peer 'add'" "$STUB_LOG"
+}
+
+@test "status does not claim a tunnel when this machine is not connected" {
+  configured
+  sed -i.bak '/^LOCAL_/d' "$WG_HUB_CONFIG_DIR/state"
+  stub ping ''
+  run "$REPO_ROOT/wg-hub" status
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"not connected"* ]]
+  ! grep -q '^ping' "$STUB_LOG"
+}

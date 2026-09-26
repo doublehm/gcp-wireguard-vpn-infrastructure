@@ -159,6 +159,9 @@ cmd_add() {
   done
   [ -n "$name" ] || die "Usage: wg-hub add <name> [--qr]"
   validate_name "$name"
+  if [ "$qr" -eq 1 ] && ! command -v qrencode >/dev/null 2>&1; then
+    die "qrencode is not installed. Install it (e.g. $(pkg_install_cmd "$(detect_pm)")) or run without --qr."
+  fi
   _require_hub
   [ -z "$(peers_db_ip "$name")" ] || die "Device '$name' already exists. Remove it first with \`wg-hub remove $name\`."
 
@@ -257,6 +260,10 @@ cmd_status() {
     --zone="$(state_get ZONE)" --format='value(status)' 2>/dev/null || echo UNKNOWN)"
   printf '  VM:      %s\n' "$vm"
   heading "This machine"
+  if [ -z "$(state_get LOCAL_PEER)" ]; then
+    warn "This machine is not connected to the hub. Run \`wg-hub setup\` to connect it."
+    return 0
+  fi
   printf '  Device:  %s (%s)\n' "$(state_get LOCAL_PEER)" "$(state_get LOCAL_IP)"
   if ping -c 1 "$HUB_VPN_IP" >/dev/null 2>&1; then
     ok "Tunnel up: hub reachable at $HUB_VPN_IP"
