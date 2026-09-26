@@ -1,0 +1,2 @@
+# Backticks in user-facing messages are intentional literals.
+disable=SC2016

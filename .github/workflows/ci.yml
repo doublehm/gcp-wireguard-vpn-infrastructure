@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y bats shellcheck
+      - name: Install tools (macOS)
+        if: runner.os == 'macOS'
+        run: brew install bats-core shellcheck
+      - name: Lint
+        run: shellcheck wg-hub install.sh lib/*.sh hub/*
+      - name: Test
+        run: bats tests
+      - name: Smoke test with stock macOS bash 3.2
+        if: runner.os == 'macOS'
+        run: |
+          /bin/bash --version | head -1
+          for f in wg-hub install.sh lib/*.sh; do /bin/bash -n "$f"; done
+          /bin/bash ./wg-hub help
+          /bin/bash ./wg-hub --version
+          out="$(WG_HUB_CONFIG_DIR="$RUNNER_TEMP/wgh" /bin/bash ./wg-hub list 2>&1 || true)"
+          echo "$out" | grep -q 'wg-hub setup'

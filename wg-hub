@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# wg-hub — your own WireGuard hub on Google Cloud, in one command.
+set -euo pipefail
+
+WG_HUB_VERSION="0.1.0"
+
+# Resolve the real location of this script (follows symlinks; no readlink -f on macOS).
+_self="${BASH_SOURCE[0]}"
+while [ -L "$_self" ]; do
+  _dir="$(cd -P "$(dirname "$_self")" && pwd)"
+  _self="$(readlink "$_self")"
+  case "$_self" in /*) ;; *) _self="$_dir/$_self" ;; esac
+done
+WG_HUB_ROOT="$(cd -P "$(dirname "$_self")" && pwd)"
+unset _self _dir
+
+for _lib in ui state os peers gcloud hub commands; do
+  # shellcheck disable=SC1090
+  source "$WG_HUB_ROOT/lib/$_lib.sh"
+done
+unset _lib
+
+usage() {
+  cat <<'EOF'
+wg-hub — your own WireGuard hub on Google Cloud
+
+Usage:
+  wg-hub setup [--force] [-y]  Guided first-time install (creates a GCP project + hub)
+  wg-hub add <name> [--qr]     Add a device (phone, laptop, friend); --qr shows a QR code
+  wg-hub list                  List devices and their last handshake
+  wg-hub remove <name>         Revoke a device
+  wg-hub isolate <a> <b>       Block traffic between two devices (names or IPs)
+  wg-hub status                Show local tunnel and hub health
+  wg-hub teardown              Delete the GCP project and the local tunnel
+  wg-hub help | --version
+
+Options:
+  -y, --yes   Answer yes to confirmations (never to teardown)
+EOF
+}
+
+main() {
+  local cmd="${1:-}"
+  [ $# -gt 0 ] && shift
+  case "$cmd" in
+    setup) cmd_setup "$@" ;;
+    add) cmd_add "$@" ;;
+    list | ls) cmd_list "$@" ;;
+    remove | rm) cmd_remove "$@" ;;
+    isolate) cmd_isolate "$@" ;;
+    status) cmd_status "$@" ;;
+    teardown) cmd_teardown "$@" ;;
+    help | -h | --help) usage ;;
+    --version | -V) printf 'wg-hub %s\n' "$WG_HUB_VERSION" ;;
+    '')
+      usage >&2
+      exit 1
+      ;;
+    *)
+      usage >&2
+      die "Unknown command: $cmd"
+      ;;
+  esac
+}
+
+main "$@"

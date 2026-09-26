@@ -1,0 +1,8 @@
+# Never commit WireGuard configs, keys, or local state.
+*.conf
+*.key
+*.pub
+.env
+state
+peers.db
+peers/
